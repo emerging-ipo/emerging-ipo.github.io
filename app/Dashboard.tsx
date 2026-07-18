@@ -132,7 +132,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
             code, current: null, lastWeekClose: null, lastWeekCloseDate: "", priceTime: "", priceDate: "",
             previousClose: null, previousCloseDate: "", dailyChange: null, dailyChangePercent: null,
             average: null, bid: null, ask: null, high: null, low: null, volume: 0, marketStatus: "",
-            note: "Yahoo 報價更新失敗", error: error instanceof Error ? error.message : String(error)
+            note: "第三方行情更新失敗", error: error instanceof Error ? error.message : String(error)
           });
         }
         done += codes.length;
@@ -170,7 +170,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
         previousCloseDate: isListingDay ? "" : quote?.previousCloseDate || row.previousCloseDate || "",
         dailyChange: isListingDay ? null : quote?.dailyChange ?? row.dailyChange ?? null,
         dailyChangePercent: isListingDay ? null : quote?.dailyChangePercent ?? row.dailyChangePercent ?? null,
-        priceTime: quote?.priceTime || row.priceTime || "", priceSource: "Yahoo 股市",
+        priceTime: quote?.priceTime || row.priceTime || "", priceSource: "第三方即時行情",
         priceError: quote?.error || "", priceNote: quote?.note || "",
         lastWeekCloseDate: quote?.lastWeekCloseDate || ""
       };
@@ -199,7 +199,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
       if (json.error) throw new Error(json.error);
       const baseRows = json.rows.map(row => ({
         ...row,
-        priceSource: "Yahoo 股市", priceError: "", priceNote: ""
+        priceSource: "第三方即時行情", priceError: "", priceNote: ""
       }));
       setMarket({ ...json, source: "yahoo", stale: true, rows: baseRows, summary: marketSummary(baseRows) });
       setError("");
@@ -430,7 +430,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
           {tab === "ipo" && <IpoView tracker={tracker} openProfile={openProfile} />}
           <footer className="site-footer" id="disclaimer">
             <div className="footer-warning"><b>重要聲明</b><p>本站為獨立維護之公開資料整理網站，與資料來源、所列公司及第三方服務無隸屬、代理或背書關係。內容僅供資訊查閱與一般研究參考，不構成投資建議；重要資訊請以原始公告為準。</p></div>
-            <div className="footer-meta"><span>資料來源：臺灣證券交易所、證券櫃檯買賣中心、公開資訊觀測站及 Yahoo 股市（報價、技術線圖與新聞連結）</span><nav aria-label="網站資訊"><Link href="/market">首頁</Link><Link href="/about">關於本站</Link><Link href="/methodology">資料方法</Link><Link href="/disclaimer">免責聲明</Link><Link href="/privacy">隱私權政策</Link></nav></div>
+            <div className="footer-meta"><span>資料來源：臺灣證券交易所、證券櫃檯買賣中心、公開資訊觀測站及其他公開或第三方行情資訊；詳細來源與限制請見資料方法。</span><nav aria-label="網站資訊"><Link href="/market">首頁</Link><Link href="/about">關於本站</Link><Link href="/methodology">資料方法</Link><Link href="/disclaimer">免責聲明</Link><Link href="/privacy">隱私權政策</Link></nav></div>
             <small>行情、時程與公司資料可能因來源更新、延遲或修正而變動；低量股票的單筆成交亦可能放大漲跌幅。</small>
           </footer>
         </div>
@@ -502,7 +502,7 @@ function MarketView(props: {
           <thead><tr><th>排名</th><th>代號／公司</th><th>產業</th><SortHeader label="成交價" sortKey="latest" sort={props.sort} onSort={toggleSort} /><th className="num">漲跌</th><SortHeader label="幅度" sortKey="dailyChangePercent" sort={props.sort} onSort={toggleSort} /><th className="num">上週收盤</th><SortHeader label="週漲跌幅" sortKey="change" sort={props.sort} onSort={toggleSort} /><th className="num mobile-hide">買價</th><th className="num mobile-hide">賣價</th><SortHeader label="成交量" sortKey="volume" sort={props.sort} onSort={toggleSort} className="mobile-hide" /><SortHeader label="推估成交額" sortKey="turnover" sort={props.sort} onSort={toggleSort} /><th className="mobile-hide">狀態</th></tr></thead>
           <tbody>{props.rows.map((row, index) => <MarketTableRow key={row.code} row={row} rank={index + 1} onOpen={() => props.openProfile(row.code)} />)}</tbody>
         </table>
-        {!props.rows.length && <div className="empty">{props.loading ? "正在取得 Yahoo 股市行情" : "目前篩選條件沒有資料"}</div>}
+        {!props.rows.length && <div className="empty">{props.loading ? "正在取得即時行情" : "目前篩選條件沒有資料"}</div>}
       </div>
     </section>
   </>;
@@ -526,7 +526,7 @@ function MarketTableRow({ row, rank, onOpen }: { row: MarketRow; rank: number; o
     <td className="rank"><span>{rank}</span></td>
     <td><button className="company-button" onClick={onOpen}>{row.name}</button><span className="subtext">{row.code}</span></td>
     <td><span className="tag">{row.industry}</span></td>
-    <td className="num price-cell">{price(row.latest)}<span className="subtext">{row.latest === null ? "無報價" : row.priceTime?.slice(11, 16) || "Yahoo"}</span></td>
+    <td className="num price-cell">{price(row.latest)}<span className="subtext">{row.latest === null ? "無報價" : row.priceTime?.slice(11, 16) || "即時"}</span></td>
     <td className={`num change-amount ${dailyDirection}`}>{signedPrice(row.dailyChange)}</td>
     <td className={`change ${dailyDirection}`}>{firstTradingDay ? <span className="muted-text" title="首日交易沒有前一交易日收盤，不納入幅度排序">首日</span> : <><b>{percent(row.dailyChangePercent)}</b><span className="change-track"><i style={{ width: `${Math.min(100, Math.abs(row.dailyChangePercent || 0) * 500)}%` }} /></span></>}</td>
     <td className="num">{row.lastWeekClose === null ? <span className="muted-text" title={row.priceNote || "上週無有效成交"}>無基準</span> : price(row.lastWeekClose)}</td>
@@ -726,7 +726,7 @@ function CompanyDrawer({ profile, marketRow, loading, refreshing, onClose }: { p
       {profile?.error && <div className="notice error"><span className="status-dot" />{profile.error}</div>}
       {profile && <>
         <section className="profile-section"><div className="profile-section-title"><span>01</span><h3>公司概況</h3><small>櫃買中心與公司公開資料</small></div><dl className="profile-grid"><dt>資料來源產業</dt><dd>{profile.industry || "待確認"}</dd><dt>主要產品／業務</dt><dd>{profile.mainBusiness || (refreshing ? "櫃買資料讀取中" : "待確認")}</dd><dt>董事長</dt><dd>{profile.chairman || "待確認"}</dd><dt>實收資本額</dt><dd>{profile.capital ? formatMoney(profile.capital) : "待確認"}</dd><dt>興櫃日期</dt><dd>{profile.listedDate || "待確認"}</dd><dt>資料更新</dt><dd>{profile.checkedAt ? formatTaipeiDateTime(profile.checkedAt) : refreshing ? "更新中" : "待確認"}</dd></dl></section>
-        <section className="profile-section"><div className="profile-section-title"><span>02</span><h3>題材與連結</h3><small>題材僅作資料索引，不代表評價或操作方向</small></div><div className="concept-list">{profile.concepts.length ? profile.concepts.map(x => <span className="tag" key={x}>{x}</span>) : <span className="muted-text">題材待確認</span>}</div><div className="actions">{companyWebsite ? <a className="link-button" href={companyWebsite} target="_blank" rel="noopener noreferrer">公司官網 <span>↗</span></a> : <span className="link-unavailable">公開來源未登錄公司官網</span>}<a className="link-button primary" href={profile.chartUrl} target="_blank" rel="noopener noreferrer">Yahoo 技術線圖 <span>↗</span></a><a className="link-button" href={profile.sourceUrl} target="_blank" rel="noopener noreferrer">櫃買中心資料 <span>↗</span></a></div></section>
+        <section className="profile-section"><div className="profile-section-title"><span>02</span><h3>題材與連結</h3><small>題材僅作資料索引，不代表評價或操作方向</small></div><div className="concept-list">{profile.concepts.length ? profile.concepts.map(x => <span className="tag" key={x}>{x}</span>) : <span className="muted-text">題材待確認</span>}</div><div className="actions">{companyWebsite ? <a className="link-button" href={companyWebsite} target="_blank" rel="noopener noreferrer">公司官網 <span>↗</span></a> : <span className="link-unavailable">公開來源未登錄公司官網</span>}<a className="link-button primary" href={profile.chartUrl} target="_blank" rel="noopener noreferrer">技術線圖 <span>↗</span></a><a className="link-button" href={profile.sourceUrl} target="_blank" rel="noopener noreferrer">櫃買中心資料 <span>↗</span></a></div></section>
         <section className="profile-section"><div className="profile-section-title"><span>03</span><h3>近期新聞</h3><small>標題連結至原始報導</small></div><ul className="news-list">{profile.news.map(item => <li key={item.url}><span className="news-source">{item.source}</span><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a><small>{item.date}</small></li>)}</ul>{!profile.news.length && <div className="empty compact">{refreshing ? "新聞資料讀取中" : "目前沒有可確認的近期公開新聞"}</div>}</section>
       </>}
     </div>

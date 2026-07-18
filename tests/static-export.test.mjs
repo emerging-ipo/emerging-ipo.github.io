@@ -12,6 +12,7 @@ test("dashboard uses the configured public data API", async () => {
   const dashboard = await readFile(new URL("../app/Dashboard.tsx", import.meta.url), "utf8");
   assert.match(dashboard, /NEXT_PUBLIC_DATA_API_BASE/);
   assert.doesNotMatch(dashboard, /fetch\(`\/api\//);
+  assert.doesNotMatch(dashboard, /Yahoo 技術線圖|正在取得 Yahoo 股市行情|>Yahoo</);
 });
 
 test("GitHub Pages workflow deploys the static output", async () => {
