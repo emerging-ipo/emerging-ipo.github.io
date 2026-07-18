@@ -20,3 +20,9 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(workflow, /path:\s*out/);
 });
+
+test("snapshot refresh removes provider names from public status text", async () => {
+  const script = await readFile(new URL("../scripts/refresh-snapshots.mjs", import.meta.url), "utf8");
+  assert.match(script, /sanitizePublicText/);
+  assert.match(script, /replace\(\/Yahoo\/gi, "第三方行情"\)/);
+});
