@@ -355,6 +355,35 @@ button { cursor: pointer; }
 .mobile-nav { display: none; }
 
 @media (min-width: 821px) {
+  .drawer {
+    inset: 50% auto auto 50%;
+    width: min(1080px, calc(100vw - 80px));
+    height: min(880px, calc(100vh - 48px));
+    border: 1px solid #314a51;
+    border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(10, 24, 31, .34);
+    transform: translate(-50%, -50%);
+  }
+  .drawer-head { min-height: 126px; padding: 25px 30px; }
+  .drawer-head h2 { font-size: 26px; }
+  .drawer-head p { font-size: 13px; }
+  .drawer-head > div > span { font-size: 11px; }
+  .drawer-body { padding: 24px 28px 36px; }
+  .quote-panel > div { min-height: 82px; padding: 15px; }
+  .quote-panel span { font-size: 12px; }
+  .quote-panel b { font-size: 17px; }
+  .quote-panel strong { font-size: 25px; }
+  .profile-section { margin-bottom: 18px; padding: 20px 22px; }
+  .profile-section-title { min-height: 34px; margin-bottom: 14px; }
+  .profile-section-title > span, .profile-section-title small, .news-list small { font-size: 11px; }
+  .profile-section-title h3 { font-size: 16px; }
+  .profile-grid { grid-template-columns: 150px 1fr; }
+  .profile-grid dt, .profile-grid dd { padding: 12px 6px; }
+  .profile-grid dt { font-size: 13px; }
+  .profile-grid dd, .news-list a, .muted-text { font-size: 14px; }
+  .link-button, .link-unavailable { font-size: 13px; }
+  .news-list li { padding: 14px 0 14px 92px; }
+  .news-source { top: 16px; width: 80px; font-size: 12px; }
   .content { width: min(1700px, 100%); }
   .brand-block strong { font-size: 16px; }
   .brand-block span:not(.brand-mark) { font-size: 10px; }
@@ -390,10 +419,6 @@ button { cursor: pointer; }
   .ipo-stage-facts b { font-size: 10px; }
   .event-strip small, .event-strip i, .recent-events button small { font-size: 10px; }
   .event-strip b, .event-strip strong { font-size: 13px; }
-  .drawer-head > div > span, .quote-panel span, .profile-section-title > span, .profile-section-title small, .news-source, .news-list small { font-size: 10px; }
-  .drawer-head p, .profile-grid dt, .link-button, .link-unavailable { font-size: 11px; }
-  .profile-grid dd, .news-list a, .muted-text { font-size: 12px; }
-  .profile-section-title h3 { font-size: 14px; }
 }
 
 @media (max-width: 1180px) {
