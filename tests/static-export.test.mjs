@@ -19,6 +19,21 @@ test("GitHub Pages workflow deploys the static output", async () => {
   const workflow = await readFile(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8");
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(workflow, /path:\s*out/);
+  assert.match(workflow, /cron:\s*["']\*\/15 0-8 \* \* 1-5["']/);
+});
+
+test("scheduled build publishes independent official TPEx data feeds", async () => {
+  const [pkg, script] = await Promise.all([
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/refresh-official-market.mjs", import.meta.url), "utf8")
+  ]);
+  assert.match(pkg, /refresh:official/);
+  assert.match(pkg, /refresh:official.*refresh:data.*next build/);
+  assert.match(script, /tpex_esb_latest_statistics/);
+  assert.match(script, /mopsfin_t187ap03_R/);
+  assert.match(script, /tpex-quotes\.json/);
+  assert.match(script, /tpex-companies\.json/);
+  assert.match(script, /SecuritiesCompanyCode/);
 });
 
 test("snapshot refresh removes provider names from public status text", async () => {

@@ -21,11 +21,15 @@ function sanitizePublicText(value, key = "") {
 await mkdir(outputDir, { recursive: true });
 
 for (const name of ["market", "tracker"]) {
-  const response = await fetch(`${apiBase}/api/${name}?refresh=1`, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(120000)
-  });
-  if (!response.ok) throw new Error(`${name} snapshot HTTP ${response.status}`);
-  const payload = sanitizePublicText(await response.json());
-  await writeFile(path.join(outputDir, `${name}.json`), `${JSON.stringify(payload)}\n`, "utf8");
+  try {
+    const response = await fetch(`${apiBase}/api/${name}?refresh=1`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(120000)
+    });
+    if (!response.ok) throw new Error(`${name} snapshot HTTP ${response.status}`);
+    const payload = sanitizePublicText(await response.json());
+    await writeFile(path.join(outputDir, `${name}.json`), `${JSON.stringify(payload)}\n`, "utf8");
+  } catch (error) {
+    console.warn(`Preserving existing ${name} snapshot: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
