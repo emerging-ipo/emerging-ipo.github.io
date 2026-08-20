@@ -22,14 +22,8 @@ type MarketRow = {
 };
 type MarketPayload = {
   generatedAt: string; quoteDate: string; quoteTime: string; stale: boolean;
-  source?: "openapi" | "csv" | "legacy" | "snapshot" | "yahoo";
+  source?: "openapi" | "csv" | "legacy" | "snapshot";
   rows: MarketRow[]; summary: Record<string, number>; error?: string;
-};
-type YahooQuote = {
-  code: string; current: number | null; lastWeekClose: number | null; lastWeekCloseDate: string;
-  previousClose: number | null; previousCloseDate: string; dailyChange: number | null; dailyChangePercent: number | null;
-  priceTime: string; priceDate: string; average: number | null; bid: number | null; ask: number | null;
-  high: number | null; low: number | null; volume: number; marketStatus: string; note: string; error: string;
 };
 type RadarRow = {
   signal: string; stage: string; code: string; name: string; market: string; status: string;
@@ -70,10 +64,8 @@ declare global {
 
 const EMPTY_MARKET: MarketPayload = { generatedAt: "", quoteDate: "", quoteTime: "", stale: false, rows: [], summary: {} };
 const EMPTY_TRACKER: TrackerPayload = { generatedAt: "", baseFriday: "", counts: {}, radar: [], alerts: [], categories: {} };
-const DATA_API_BASE = (process.env.NEXT_PUBLIC_DATA_API_BASE || "https://tw-emerging-radar.chiayu333.chatgpt.site").replace(/\/$/, "");
-const dataApiUrl = (path: string) => `${DATA_API_BASE}${path}`;
 const NAV_ITEMS: Array<{ id: Tab; path: string; label: string; short: string; description: string }> = [
-  { id: "market", path: "/market", label: "興櫃市場", short: "市場", description: "即時排行與流動性" },
+  { id: "market", path: "/market", label: "興櫃市場", short: "市場", description: "收盤排行與流動性" },
   { id: "radar", path: "/radar", label: "進度雷達", short: "雷達", description: "公開事件、階段與時程" },
   { id: "ipo", path: "/ipo", label: "IPO 時程", short: "時程", description: "審議、競拍與買賣日" },
 ];
@@ -107,116 +99,34 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
   const trackerRefreshAtRef = useRef(0);
   const [quoteProgress, setQuoteProgress] = useState({ updating: false, done: 0, total: 0, success: 0, errors: 0 });
 
-  const loadYahooQuotes = useCallback(async (baseRows: MarketRow[], force = false) => {
-    const chunks: string[][] = [];
-    for (let index = 0; index < baseRows.length; index += 20) chunks.push(baseRows.slice(index, index + 20).map(row => row.code));
-    const quoteMap = new Map<string, YahooQuote>();
-    let cursor = 0;
-    let done = 0;
-    let generatedAt = "";
-    setQuoteProgress({ updating: true, done: 0, total: baseRows.length, success: 0, errors: 0 });
-
-    const workers = Array.from({ length: Math.min(2, Math.max(1, chunks.length)) }, async () => {
-      while (cursor < chunks.length) {
-        const codes = chunks[cursor++];
-        try {
-          const params = new URLSearchParams({ codes: codes.join(",") });
-          if (force) params.set("refresh", "1");
-          const response = await fetch(dataApiUrl(`/api/yahoo?${params.toString()}`), { cache: "no-store" });
-          const payload = await response.json() as { generatedAt?: string; quotes?: YahooQuote[]; error?: string };
-          if (!response.ok || payload.error) throw new Error(payload.error || `HTTP ${response.status}`);
-          generatedAt = payload.generatedAt || generatedAt;
-          for (const quote of payload.quotes || []) quoteMap.set(quote.code, quote);
-        } catch (error) {
-          for (const code of codes) quoteMap.set(code, {
-            code, current: null, lastWeekClose: null, lastWeekCloseDate: "", priceTime: "", priceDate: "",
-            previousClose: null, previousCloseDate: "", dailyChange: null, dailyChangePercent: null,
-            average: null, bid: null, ask: null, high: null, low: null, volume: 0, marketStatus: "",
-            note: "第三方行情更新失敗", error: error instanceof Error ? error.message : String(error)
-          });
-        }
-        done += codes.length;
-        const values = [...quoteMap.values()];
-        setQuoteProgress({
-          updating: true, done, total: baseRows.length,
-          success: values.filter(quote => quote.current !== null).length,
-          errors: values.filter(quote => quote.current === null).length
-        });
-      }
-    });
-    await Promise.all(workers);
-
-    const rows = baseRows.map(row => {
-      const quote = quoteMap.get(row.code);
-      const latest = quote?.current ?? row.latest ?? null;
-      const lastWeekClose = quote?.lastWeekClose ?? row.lastWeekClose ?? null;
-      const useYahooLiquidity = Boolean(quote?.priceDate && (!row.quoteDate || quote.priceDate >= row.quoteDate));
-      const quoteVolume = quote && useYahooLiquidity ? quote.volume : row.volume;
-      const average = quote?.average ?? row.average;
-      const turnover = average !== null && quoteVolume >= 0 ? Math.round(average * quoteVolume) : row.turnover;
-      const qualified = quoteVolume >= 10_000 && turnover >= 500_000;
-      const isListingDay = Boolean(row.listedDate && quote?.priceDate === row.listedDate);
-      const change = latest !== null && lastWeekClose !== null && lastWeekClose !== 0
-        ? (latest - lastWeekClose) / lastWeekClose : null;
-      return {
-        ...row, latest, lastWeekClose, change, average,
-        bid: quote?.bid ?? row.bid, ask: quote?.ask ?? row.ask,
-        high: quote?.high ?? row.high, low: quote?.low ?? row.low,
-        volume: quoteVolume,
-        turnover,
-        qualified,
-        lowLiquidity: !qualified,
-        previousClose: isListingDay ? null : quote?.previousClose ?? row.previousClose ?? null,
-        previousCloseDate: isListingDay ? "" : quote?.previousCloseDate || row.previousCloseDate || "",
-        dailyChange: isListingDay ? null : quote?.dailyChange ?? row.dailyChange ?? null,
-        dailyChangePercent: isListingDay ? null : quote?.dailyChangePercent ?? row.dailyChangePercent ?? null,
-        priceTime: quote?.priceTime || row.priceTime || "", priceSource: "第三方即時行情",
-        priceError: quote?.error || "", priceNote: quote?.note || "",
-        lastWeekCloseDate: quote?.lastWeekCloseDate || ""
-      };
-    }).sort((a, b) => (b.dailyChangePercent ?? -999) - (a.dailyChangePercent ?? -999) || b.volume - a.volume || a.code.localeCompare(b.code));
-    const quotes = [...quoteMap.values()];
-    const success = quotes.filter(quote => quote.current !== null).length;
-    const errors = quotes.length - success;
-    const latestStamp = quotes.map(quote => quote.priceTime).filter(Boolean).sort().at(-1) || "";
-    setMarket(current => ({
-      ...current,
-      generatedAt: generatedAt || current.generatedAt,
-      quoteDate: latestStamp.slice(0, 10) || current.quoteDate,
-      quoteTime: latestStamp.slice(11, 19) || current.quoteTime,
-      source: "yahoo",
-      stale: success === 0,
-      rows,
-      summary: { ...marketSummary(rows), yahooQuotes: success, yahooErrors: errors }
-    }));
-    setQuoteProgress({ updating: false, done: baseRows.length, total: baseRows.length, success, errors });
-  }, []);
-
-  const loadMarket = useCallback(async (force = false) => {
+  const loadMarket = useCallback(async () => {
     setLoading(true);
+    setQuoteProgress(current => ({ ...current, updating: true }));
     try {
-      const json = await fetchData<MarketPayload>(`/api/market${force ? "?refresh=1" : ""}`, "/data/market.json");
+      const response = await fetch("/data/market.json", { cache: "no-store" });
+      const json = await response.json() as MarketPayload;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       if (json.error) throw new Error(json.error);
-      const baseRows = json.rows.map(row => ({
-        ...row,
-        priceSource: "第三方即時行情", priceError: "", priceNote: ""
-      }));
-      setMarket({ ...json, source: "yahoo", stale: true, rows: baseRows, summary: marketSummary(baseRows) });
+      const success = json.rows.filter(row => row.latest !== null).length;
+      setMarket(json);
+      setQuoteProgress({ updating: false, done: json.rows.length, total: json.rows.length, success, errors: json.rows.length - success });
       setError("");
-      await loadYahooQuotes(baseRows, force);
     } catch (err) {
+      setQuoteProgress(current => ({ ...current, updating: false }));
       setError(`行情更新失敗：${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
-  }, [loadYahooQuotes]);
+  }, []);
 
-  const loadTracker = useCallback(async (force = false) => {
+  const loadTracker = useCallback(async () => {
     if (trackerRefreshingRef.current) return;
     trackerRefreshingRef.current = true;
     trackerRefreshAtRef.current = Date.now();
     try {
-      const json = await fetchData<TrackerPayload>(`/api/tracker${force ? "?refresh=1" : ""}`, "/data/tracker.json");
+      const response = await fetch("/data/tracker.json", { cache: "no-store" });
+      const json = await response.json() as TrackerPayload;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       if (json.error) throw new Error(json.error);
       setTracker(json);
     } catch (err) {
@@ -255,33 +165,16 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 
     try {
-      const response = await fetch(dataApiUrl(`/api/company?code=${encodeURIComponent(code)}&summary=1`));
-      const summary = await response.json() as CompanyProfile;
-      if (!response.ok || summary.error) throw new Error(summary.error || `HTTP ${response.status}`);
-      if (new URL(window.location.href).searchParams.get("company") === code) {
-        setProfile(current => ({ ...immediateProfile, ...current, ...summary, news: current?.news || [] }));
-      }
+      const detail = await loadTpexCompanyDetail(code);
+      const verifiedProfile = mergeOfficialCompanyDetail({ ...immediateProfile, checkedAt: new Date().toISOString() }, detail);
+      profileCache.current.set(code, verifiedProfile);
+      if (new URL(window.location.href).searchParams.get("company") === code) setProfile(verifiedProfile);
     } catch (err) {
       if (!cachedProfile && new URL(window.location.href).searchParams.get("company") === code) {
         setProfile(current => current ? { ...current, error: err instanceof Error ? err.message : String(err) } : immediateProfile);
       }
     } finally {
       setProfileLoading(false);
-    }
-
-    try {
-      const [response, browserDetail] = await Promise.all([
-        fetch(dataApiUrl(`/api/company?code=${encodeURIComponent(code)}&refresh=${Date.now()}`), { cache: "no-store" }),
-        loadTpexCompanyDetail(code).catch(() => null)
-      ]);
-      const fullProfile = await response.json() as CompanyProfile;
-      if (!response.ok || fullProfile.error) throw new Error(fullProfile.error || `HTTP ${response.status}`);
-      const verifiedProfile = browserDetail ? mergeOfficialCompanyDetail(fullProfile, browserDetail) : fullProfile;
-      profileCache.current.set(code, verifiedProfile);
-      if (new URL(window.location.href).searchParams.get("company") === code) setProfile(verifiedProfile);
-    } catch {
-      // The summary remains usable when an external profile or news source is slow.
-    } finally {
       if (new URL(window.location.href).searchParams.get("company") === code) setProfileRefreshing(false);
     }
   }, []);
@@ -315,8 +208,8 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
     }
     const onPopState = () => setTab(tabFromLocation());
     window.addEventListener("popstate", onPopState);
-    void loadMarket(true);
-    void loadTracker(true);
+    void loadMarket();
+    void loadTracker();
     const sharedCompany = new URLSearchParams(window.location.search).get("company") || "";
     if (/^\d{4}$/.test(sharedCompany)) void openProfile(sharedCompany);
     return () => {
@@ -328,7 +221,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
     const refreshWhenVisible = (minimumAge: number) => {
       if (document.visibilityState !== "visible") return;
       if (Date.now() - trackerRefreshAtRef.current < minimumAge) return;
-      void loadTracker(true);
+      void loadTracker();
     };
     const onFocus = () => refreshWhenVisible(60_000);
     const onVisibilityChange = () => refreshWhenVisible(60_000);
@@ -396,7 +289,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
           ))}
         </nav>
         <div className="rail-status">
-          <div className="rail-status-line"><span className={`live-dot ${quoteProgress.updating || market.stale ? "stale" : ""}`} /><b>{quoteProgress.updating ? `報價更新 ${quoteProgress.done}/${quoteProgress.total}` : market.source === "yahoo" ? `即時報價 ${quoteProgress.success}/${quoteProgress.total}` : "行情讀取中"}</b></div>
+          <div className="rail-status-line"><span className={`live-dot ${quoteProgress.updating || market.stale ? "stale" : ""}`} /><b>{quoteProgress.updating ? "資料讀取中" : `收盤報價 ${quoteProgress.success}/${quoteProgress.total}`}</b></div>
           <span>{market.quoteDate || "讀取中"} {market.quoteTime || ""}</span>
           <small>行情 · TWSE · TPEx</small>
         </div>
@@ -408,14 +301,14 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
           <div className="breadcrumb"><span>台灣資本市場</span><b>{activeNav.label}</b></div>
           <div className="command-actions">
             <div className="quote-clock"><span>資料更新</span><b>{lastUpdated}</b></div>
-            <button className="icon-action" disabled={quoteProgress.updating} onClick={() => void Promise.all([loadMarket(true), loadTracker(true)])} aria-label="立即更新" title="立即更新">↻</button>
+            <button className="icon-action" disabled={quoteProgress.updating} onClick={() => void Promise.all([loadMarket(), loadTracker()])} aria-label="重新讀取" title="重新讀取">↻</button>
           </div>
         </header>
 
         <div className="content">
           <div className="page-heading">
             <div><span className="page-kicker">EMERGING STOCKS</span><h1>{activeNav.label}</h1><p>{activeNav.description}</p></div>
-            <div className={`market-state ${quoteProgress.updating || market.stale ? "stale" : ""}`}><span className="live-dot" />{quoteProgress.updating ? `報價更新中 ${quoteProgress.done}/${quoteProgress.total}` : market.source === "yahoo" ? `即時報價 · ${quoteProgress.errors} 檔無報價` : "市場資料讀取中"}</div>
+            <div className={`market-state ${quoteProgress.updating || market.stale ? "stale" : ""}`}><span className="live-dot" />{quoteProgress.updating ? "資料讀取中" : `收盤報價 · ${quoteProgress.errors} 檔無報價`}</div>
           </div>
 
           <aside className="fraud-strip" aria-label="防詐騙提醒">
@@ -425,7 +318,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
           </aside>
 
           {error && <div className="notice error"><span className="status-dot" />{error}</div>}
-          {tab === "market" && <MarketView market={market} rows={visibleRows} totalRows={filteredRows.length} loading={loading} quoteProgress={quoteProgress} search={search} setSearch={setSearch} industry={industry} setIndustry={setIndustry} industries={industries} board={board} setBoard={setBoard} limit={limit} setLimit={setLimit} move={marketMove} setMove={setMarketMove} moveCounts={moveCounts} sort={marketSort} setSort={setMarketSort} refresh={() => void loadMarket(true)} openProfile={openProfile} />}
+          {tab === "market" && <MarketView market={market} rows={visibleRows} totalRows={filteredRows.length} loading={loading} quoteProgress={quoteProgress} search={search} setSearch={setSearch} industry={industry} setIndustry={setIndustry} industries={industries} board={board} setBoard={setBoard} limit={limit} setLimit={setLimit} move={marketMove} setMove={setMarketMove} moveCounts={moveCounts} sort={marketSort} setSort={setMarketSort} refresh={() => void loadMarket()} openProfile={openProfile} />}
           {tab === "radar" && <RadarView tracker={tracker} marketRows={market.rows} openProfile={openProfile} />}
           {tab === "ipo" && <IpoView tracker={tracker} openProfile={openProfile} />}
           <footer className="site-footer" id="disclaimer">
@@ -502,7 +395,7 @@ function MarketView(props: {
           <thead><tr><th>排名</th><th>代號／公司</th><th>產業</th><SortHeader label="成交價" sortKey="latest" sort={props.sort} onSort={toggleSort} /><th className="num">漲跌</th><SortHeader label="幅度" sortKey="dailyChangePercent" sort={props.sort} onSort={toggleSort} /><th className="num">上週收盤</th><SortHeader label="週漲跌幅" sortKey="change" sort={props.sort} onSort={toggleSort} /><th className="num mobile-hide">買價</th><th className="num mobile-hide">賣價</th><SortHeader label="成交量" sortKey="volume" sort={props.sort} onSort={toggleSort} className="mobile-hide" /><SortHeader label="推估成交額" sortKey="turnover" sort={props.sort} onSort={toggleSort} /><th className="mobile-hide">狀態</th></tr></thead>
           <tbody>{props.rows.map((row, index) => <MarketTableRow key={row.code} row={row} rank={index + 1} onOpen={() => props.openProfile(row.code)} />)}</tbody>
         </table>
-        {!props.rows.length && <div className="empty">{props.loading ? "正在取得即時行情" : "目前篩選條件沒有資料"}</div>}
+        {!props.rows.length && <div className="empty">{props.loading ? "正在讀取報價資料" : "目前篩選條件沒有資料"}</div>}
       </div>
     </section>
   </>;
@@ -526,7 +419,7 @@ function MarketTableRow({ row, rank, onOpen }: { row: MarketRow; rank: number; o
     <td className="rank"><span>{rank}</span></td>
     <td><button className="company-button" onClick={onOpen}>{row.name}</button><span className="subtext">{row.code}</span></td>
     <td><span className="tag">{row.industry}</span></td>
-    <td className="num price-cell">{price(row.latest)}<span className="subtext">{row.latest === null ? "無報價" : row.priceTime?.slice(11, 16) || "即時"}</span></td>
+    <td className="num price-cell">{price(row.latest)}<span className="subtext">{row.latest === null ? "無報價" : row.priceTime?.slice(11, 16) || "--"}</span></td>
     <td className={`num change-amount ${dailyDirection}`}>{signedPrice(row.dailyChange)}</td>
     <td className={`change ${dailyDirection}`}>{firstTradingDay ? <span className="muted-text" title="首日交易沒有前一交易日收盤，不納入幅度排序">首日</span> : <><b>{percent(row.dailyChangePercent)}</b><span className="change-track"><i style={{ width: `${Math.min(100, Math.abs(row.dailyChangePercent || 0) * 500)}%` }} /></span></>}</td>
     <td className="num">{row.lastWeekClose === null ? <span className="muted-text" title={row.priceNote || "上週無有效成交"}>無基準</span> : price(row.lastWeekClose)}</td>
@@ -740,19 +633,6 @@ function formatTaipeiDateTime(value: string): string {
   return date.toLocaleString("zh-TW", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-async function fetchData<T extends { error?: string }>(path: string, fallbackPath: string): Promise<T> {
-  try {
-    const response = await fetch(dataApiUrl(path), { cache: "no-store" });
-    const payload = await response.json() as T;
-    if (!response.ok || payload.error) throw new Error(payload.error || `HTTP ${response.status}`);
-    return payload;
-  } catch (liveError) {
-    const fallback = await fetch(fallbackPath, { cache: "no-store" });
-    if (!fallback.ok) throw liveError;
-    return await fallback.json() as T;
-  }
-}
-
 let tpexDetailQueue: Promise<unknown> = Promise.resolve();
 
 function loadTpexCompanyDetail(code: string): Promise<TpexCompanyDetail> {
@@ -825,21 +705,8 @@ function Metric({ label, value, sub, className = "" }: { label: string; value: s
   return <div className={`metric ${className}`}><span>{label}</span><strong>{value}</strong><small>{sub}</small></div>;
 }
 
-function marketSummary(rows: MarketRow[]): Record<string, number> {
-  return {
-    count: rows.length,
-    qualified: rows.filter(row => row.qualified).length,
-    rising: rows.filter(row => row.dailyChangePercent !== null && row.dailyChangePercent !== undefined && row.dailyChangePercent > 0).length,
-    falling: rows.filter(row => row.dailyChangePercent !== null && row.dailyChangePercent !== undefined && row.dailyChangePercent < 0).length,
-    flat: rows.filter(row => row.dailyChangePercent === 0).length,
-    lowLiquidity: rows.filter(row => row.lowLiquidity).length,
-    turnover: rows.reduce((sum, row) => sum + row.turnover, 0)
-  };
-}
-
 function price(value: number | null | undefined) { return value === null || value === undefined || !Number.isFinite(value) ? "-" : value.toLocaleString("zh-TW", { maximumFractionDigits: 2 }); }
 function percent(value: number | null | undefined) { if (value === null || value === undefined || !Number.isFinite(value)) return "-"; return `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`; }
-function percentValue(value: number | string) { const n = Number(value); return Number.isFinite(n) && value !== "" ? percent(n) : "-"; }
 function numericValue(value: number | string | null | undefined): number | null { const text = String(value ?? "").replace(/,/g, "").trim(); const n = Number(text); return text && Number.isFinite(n) ? n : null; }
 function changeClass(value: number) { return !Number.isFinite(value) || value === 0 ? "flat" : value > 0 ? "up" : "down"; }
 function signedPrice(value: number | null | undefined) { if (value === null || value === undefined || !Number.isFinite(value)) return "-"; return `${value > 0 ? "+" : ""}${price(value)}`; }

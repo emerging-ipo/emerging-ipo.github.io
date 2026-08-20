@@ -5,7 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: "*/15 0-8 * * 1-5"
+    - cron: "10 7 * * 1-5"
 
 permissions:
   contents: read
@@ -27,9 +27,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-        env:
-          DATA_API_BASE: https://tw-emerging-radar.chiayu333.chatgpt.site
-          NEXT_PUBLIC_DATA_API_BASE: https://tw-emerging-radar.chiayu333.chatgpt.site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

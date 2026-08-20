@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "next dev",
     "refresh:official": "node scripts/refresh-official-market.mjs",
-    "refresh:data": "node scripts/refresh-snapshots.mjs",
-    "build": "npm run refresh:official && npm run refresh:data && next build",
+    "build:data": "node scripts/build-static-data.mjs",
+    "refresh:data": "npm run build:data",
+    "build": "npm run build:data && next build",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs"
   },
