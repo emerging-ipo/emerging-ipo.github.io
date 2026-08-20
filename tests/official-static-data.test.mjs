@@ -46,6 +46,8 @@ test("withdrawn applications are excluded and auction dates never become listing
 test("terminated application terms are recognised across official status wording", () => {
   assert.equal(isTerminatedApplication("撤件"), true);
   assert.equal(isTerminatedApplication("公司自行撤回申請"), true);
+  assert.equal(isTerminatedApplication("審議會決議退回上櫃審議"), true);
+  assert.equal(isTerminatedApplication("終止上市契約"), true);
   assert.equal(isTerminatedApplication("終止申請"), true);
   assert.equal(isTerminatedApplication("已核准"), false);
 });
