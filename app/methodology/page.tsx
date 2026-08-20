@@ -3,14 +3,14 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "資料方法與分類說明",
-  description: "說明興櫃市場雷達的報價來源、週比較基準、流動性分類、IPO 事件標籤與資料限制。",
+  description: "說明興櫃雷達觀測站的報價來源、週比較基準、流動性分類、IPO 事件標籤與資料限制。",
   alternates: { canonical: "/methodology" },
 };
 
 export default function MethodologyPage() {
   return <main className="legal-shell">
     <header className="legal-header">
-      <Link className="legal-brand" href="/market"><span><b>興櫃市場雷達</b><small>Taiwan Emerging Stock Data</small></span></Link>
+      <Link className="legal-brand" href="/market"><span><b>興櫃雷達觀測站</b><small>Taiwan Emerging Stock Data</small></span></Link>
       <nav><Link href="/market">返回首頁</Link><Link href="/about">關於本站</Link><Link href="/disclaimer">免責聲明</Link></nav>
     </header>
     <article className="legal-document">

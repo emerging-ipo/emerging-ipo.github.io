@@ -279,7 +279,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
     <main className="app-shell">
       <aside className="side-rail">
         <div className="brand-block">
-          <div><strong>興櫃市場雷達</strong><span>Taiwan Emerging Stock Data</span></div>
+          <div><strong>興櫃雷達觀測站</strong><span>Taiwan Emerging Stock Data</span></div>
         </div>
         <nav className="side-nav" aria-label="主要頁面">
           {NAV_ITEMS.map(item => (
@@ -297,7 +297,7 @@ export default function Dashboard({ initialTab = "market" }: { initialTab?: Tab 
 
       <div className="workspace">
         <header className="command-bar">
-          <div className="mobile-brand"><strong>興櫃市場雷達</strong></div>
+          <div className="mobile-brand"><strong>興櫃雷達觀測站</strong></div>
           <div className="breadcrumb"><span>台灣資本市場</span><b>{activeNav.label}</b></div>
           <div className="command-actions">
             <div className="quote-clock"><span>資料更新</span><b>{lastUpdated}</b></div>

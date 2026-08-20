@@ -3,13 +3,13 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "免責聲明",
-  description: "興櫃市場雷達的網站定位、資料限制、投資風險與第三方服務說明。",
+  description: "興櫃雷達觀測站的網站定位、資料限制、投資風險與第三方服務說明。",
 };
 
 export default function DisclaimerPage() {
   return <main className="legal-shell">
     <header className="legal-header">
-      <Link className="legal-brand" href="/market"><span><b>興櫃市場雷達</b><small>Taiwan Emerging Stock Data</small></span></Link>
+      <Link className="legal-brand" href="/market"><span><b>興櫃雷達觀測站</b><small>Taiwan Emerging Stock Data</small></span></Link>
       <nav><Link href="/market">返回首頁</Link><Link href="/about">關於本站</Link><Link href="/methodology">資料方法</Link><Link href="/privacy">隱私權政策</Link></nav>
     </header>
     <article className="legal-document">
@@ -17,7 +17,7 @@ export default function DisclaimerPage() {
       <aside className="fraud-alert" aria-labelledby="fraud-alert-title">
         <h2 id="fraud-alert-title">防詐騙提醒</h2>
         <p>本站目前未設立或經營任何 LINE、Telegram、Discord 或其他投資群組，也不會主動私訊招攬會員、收取費用、代為操作、提供明牌、保證獲利，或要求匯款及提供帳戶密碼、驗證碼等敏感資料。</p>
-        <p>如有人冒用「興櫃市場雷達」名義邀請入群、推介個股、索取金錢或個人資料，請勿回應或付款，並保留相關紀錄向該平台檢舉；如有疑慮，可撥打 165 反詐騙諮詢專線查證。</p>
+        <p>如有人冒用「興櫃雷達觀測站」名義邀請入群、推介個股、索取金錢或個人資料，請勿回應或付款，並保留相關紀錄向該平台檢舉；如有疑慮，可撥打 165 反詐騙諮詢專線查證。</p>
       </aside>
       <div className="legal-summary warning">本站整理臺灣證券交易所、證券櫃檯買賣中心、公開資訊觀測站及其他公開或第三方行情資訊，內容僅供資訊查閱與一般研究參考，不構成投資建議、招攬、推介、交易指示或收益保證。</div>
       <section><h2>1. 網站定位與獨立性</h2><p>本站與所引用的主管機關、交易所、櫃買中心、公司、行情服務、新聞網站及其他第三方均無隸屬、代理、合作、授權或背書關係，除非另有清楚書面揭露。第三方名稱及商標僅於必要時用於識別資料來源或外部連結，其權利歸各權利人所有。</p></section>
