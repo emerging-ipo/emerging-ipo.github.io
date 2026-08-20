@@ -43,6 +43,25 @@ test("withdrawn applications are excluded and auction dates never become listing
   assert.equal(payload.categories.review.find(row => row.code === "7777").status, "已審議");
 });
 
+test("management stocks and inactive historical applications are excluded from the live IPO pipeline", () => {
+  const payload = buildTrackerPayload({
+    generatedAt: "2026-08-20 15:10:00",
+    applicants: [
+      { code: "1807", name: "羅馬磁磚(管理股票)", market: "上市", submitDate: "2026-08-01" },
+      { code: "6199", name: "精威科技(管理股票)", market: "上市", submitDate: "2026-08-01" },
+      { code: "3000", name: "多年未更新公司", market: "上市", submitDate: "2024-08-19" },
+      { code: "3001", name: "保有近期競拍公司", market: "上市", submitDate: "2020-01-01" },
+      { code: "3002", name: "近期送件公司", market: "上市", submitDate: "2026-08-01" }
+    ],
+    auctions: [{ code: "3001", name: "保有近期競拍公司", bidStart: "2026-08-25", bidEnd: "2026-08-27", openDate: "2026-08-28" }],
+    prices: new Map(),
+    baselines: new Map(),
+    today: "2026-08-20"
+  });
+
+  assert.deepEqual(payload.radar.map(row => row.code), ["3002", "3001"]);
+});
+
 test("terminated application terms are recognised across official status wording", () => {
   assert.equal(isTerminatedApplication("撤件"), true);
   assert.equal(isTerminatedApplication("公司自行撤回申請"), true);
