@@ -5,10 +5,17 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  completedWeekEndForQuoteDate,
   createRecentRegistrationRequest,
   loadCompletedWeekReports,
   writeValidatedJson
 } from "../lib/static-data-builder.mjs";
+
+test("Friday and Saturday builds keep Friday's quote date on the prior completed week", () => {
+  const fridayQuoteDate = "2026-08-21";
+  assert.equal(completedWeekEndForQuoteDate(fridayQuoteDate), "2026-08-14");
+  assert.equal(completedWeekEndForQuoteDate(fridayQuoteDate), "2026-08-14");
+});
 
 test("builder refuses a short roster and preserves the prior market file", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "esrstk-static-data-"));

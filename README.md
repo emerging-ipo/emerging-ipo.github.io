@@ -6,10 +6,10 @@ Independent GitHub Pages edition of the Taiwan emerging-stock market dashboard. 
 
 `npm run build:data` reads the official TPEx/TWSE sources, validates the responses, and writes the static JSON files used by the site:
 
-- TPEx emerging-company master and latest statistics for the active roster and closing quotations.
+- TPEx emerging-company master and latest statistics for the active roster and post-market quotation data.
 - TPEx recent-registration feed as a supplement and cross-check; it never removes companies from the master roster.
 - TWSE and TPEx listing-application feeds, TWSE auction notices and public-offering notices for IPO stages.
-- TPEx daily reports for the most recent completed week's final valid transaction price. If Friday has no trading, the final available trading day that week is used as `上週收盤價`.
+- TPEx daily reports for the previous complete trading week's final valid weighted-average transaction price. If Friday has no trading, the final available trading day that week is used as `上週基準均價`.
 
 Withdrawn, self-withdrawn, cancelled and terminated applications are excluded. Auction, allotment and opening dates are never treated as a stock listing/trading date unless a direct official listing/trading date is available.
 
@@ -17,7 +17,7 @@ Withdrawn, self-withdrawn, cancelled and terminated applications are excluded. A
 
 The repository must be named `esrstk.github.io` under the `esrstk` GitHub user or organization. GitHub Actions builds the static `out` directory and publishes it to GitHub Pages.
 
-The scheduled build runs at 15:10 Taiwan time on weekdays (`10 7 * * 1-5` UTC), after the normal market close. GitHub's scheduled workflows can occasionally start a little late; this does not change the data rules. You can run the same update manually from GitHub: **Actions** → **Deploy GitHub Pages** → **Run workflow**.
+The scheduled build runs at 16:10 and 17:40 Taiwan time on weekdays (`10 8 * * 1-5` and `40 9 * * 1-5` UTC), plus a final Saturday 10:00 Taiwan time reconciliation (`0 2 * * 6` UTC). GitHub's scheduled workflows can occasionally start a little late; this does not change the data rules. You can run the same update manually from GitHub: **Actions** → **Deploy GitHub Pages** → **Run workflow**.
 
 The build validates the official responses before it writes the static files. If a source is incomplete or a build fails, deployment stops and the previously published GitHub Pages version remains available rather than being replaced by an empty dataset.
 

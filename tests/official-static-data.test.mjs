@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildMarketPayload,
   buildTrackerPayload,
+  completedWeekEndForQuoteDate,
   isTerminatedApplication,
   mergeRecentRegistrations,
   parseDailyAverageReport,
@@ -77,23 +78,40 @@ test("weekly baseline uses the final available session in the completed week", (
     { date: "2026-08-06", rows: [{ code: "1234", close: 83 }] }
   ], "2026-08-07");
 
-  assert.deepEqual(baselines.get("1234"), { close: 83, date: "2026-08-06" });
+  assert.deepEqual(baselines.get("1234"), { average: 83, close: 83, date: "2026-08-06" });
+});
+
+test("weekly baseline falls back to the latest valid session when Friday is closed", () => {
+  const baselines = selectWeeklyBaselines([
+    { date: "2026-08-11", values: new Map([["1234", 79]]) },
+    { date: "2026-08-13", values: new Map([["1234", 81]]) }
+  ], "2026-08-14");
+
+  assert.deepEqual(baselines.get("1234"), { average: 81, close: 81, date: "2026-08-13" });
 });
 
 test("market payload keeps official current, prior-session and completed-week values distinct", () => {
   const payload = buildMarketPayload({
     generatedAt: "2026-08-20 15:10:00",
     companies: [{ SecuritiesCompanyCode: "1234", CompanyAbbreviation: "測試公司", CompanyName: "測試公司股份有限公司", SecuritiesIndustryCode: "24", DateOfListing: "20260819" }],
-    quotes: [{ SecuritiesCompanyCode: "1234", Date: "115/08/20", Time: "15:00:00", LatestPrice: "110", PreviousAveragePrice: "100", Average: "108", TransactionVolume: "10000" }],
-    baselines: new Map([["1234", { close: 90, date: "2026-08-14" }]])
+    quotes: [{ SecuritiesCompanyCode: "1234", Date: "115/08/20", Time: "15:00:00", LatestPrice: "110", PreviousAveragePrice: "98", Average: "101", TransactionVolume: "10000" }],
+    baselines: new Map([["1234", { average: 95, date: "2026-08-14" }]])
   });
 
   assert.equal(payload.rows[0].latest, 110);
-  assert.equal(payload.rows[0].dailyChange, 10);
-  assert.equal(payload.rows[0].dailyChangePercent, 0.1);
-  assert.equal(payload.rows[0].lastWeekClose, 90);
-  assert.equal(payload.rows[0].change, 0.222222);
+  assert.equal(payload.rows[0].average, 101);
+  assert.equal(payload.rows[0].dailyChange, 3);
+  assert.equal(payload.rows[0].dailyChangePercent, 0.030612);
+  assert.equal(payload.rows[0].lastWeekAverage, 95);
+  assert.equal(payload.rows[0].lastWeekAverageDate, "2026-08-14");
+  assert.equal(payload.rows[0].lastWeekClose, 95);
+  assert.equal(payload.rows[0].change, 0.063158);
   assert.equal(payload.rows[0].industry, "半導體");
+});
+
+test("weekly baseline week follows the official quote date instead of the build date", () => {
+  assert.equal(completedWeekEndForQuoteDate("2026-08-21"), "2026-08-14");
+  assert.equal(completedWeekEndForQuoteDate("2026-08-24"), "2026-08-21");
 });
 
 test("daily TPEx report aggregates transaction rows before selecting a weekly baseline", () => {
@@ -123,4 +141,17 @@ test("compact official quote times are displayed as clock times", () => {
 
   assert.equal(payload.quoteTime, "16:00:05");
   assert.equal(payload.rows[0].priceTime, "2026-08-20 16:00:05");
+});
+
+test("zero-volume quotes are treated as unavailable instead of a zero-price decline", () => {
+  const payload = buildMarketPayload({
+    generatedAt: "2026-08-20 16:10:00",
+    companies: [{ SecuritiesCompanyCode: "1234", CompanyAbbreviation: "測試公司" }],
+    quotes: [{ SecuritiesCompanyCode: "1234", Date: "1150820", Time: "160005", LatestPrice: "0", PreviousAveragePrice: "90", Average: "0", TransactionVolume: "0" }]
+  });
+
+  assert.equal(payload.rows[0].latest, null);
+  assert.equal(payload.rows[0].average, null);
+  assert.equal(payload.rows[0].dailyChange, null);
+  assert.equal(payload.rows[0].dailyChangePercent, null);
 });
