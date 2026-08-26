@@ -37,24 +37,43 @@ test("recent-registration endpoint posts the current Gregorian year", () => {
   assert.equal(request.init.body, "date=2026");
 });
 
+function dailyReportResponse(date) {
+  return {
+    ok: true,
+    json: async () => ({
+      tables: [{ date: date.replaceAll("-", ""), data: [["1234", "", "", "80", "1", "0"]] }]
+    })
+  };
+}
+
 test("weekly report download retries and refuses an incomplete official week", async () => {
   const attempts = new Map();
   const fetchImpl = async url => {
     const date = decodeURIComponent(String(url).match(/date=([^&]+)/)?.[1] || "").replaceAll("/", "-");
     attempts.set(date, (attempts.get(date) || 0) + 1);
     if (date === "2026-08-14") throw new Error("temporary official source failure");
-    return {
-      ok: true,
-      json: async () => ({
-        date: date.replaceAll("-", ""),
-        tables: [{ data: [["1234", "", "", "80", "1", "0"]] }]
-      })
-    };
+    return dailyReportResponse(date);
   };
 
   await assert.rejects(
     () => loadCompletedWeekReports(fetchImpl, "2026-08-14"),
     /2026-08-14.*temporary official source failure/
   );
-  assert.equal(attempts.get("2026-08-14"), 3);
+  assert.equal(attempts.get("2026-08-14"), 5);
+});
+
+test("weekly report download completes when a transient daily source recovers on the fourth attempt", async () => {
+  const attempts = new Map();
+  const fetchImpl = async url => {
+    const date = decodeURIComponent(String(url).match(/date=([^&]+)/)?.[1] || "").replaceAll("/", "-");
+    const count = (attempts.get(date) || 0) + 1;
+    attempts.set(date, count);
+    if (date === "2026-08-14" && count < 4) throw new Error("temporary official source failure");
+    return dailyReportResponse(date);
+  };
+
+  const reports = await loadCompletedWeekReports(fetchImpl, "2026-08-14");
+
+  assert.equal(attempts.get("2026-08-14"), 4);
+  assert.equal(reports.length, 5);
 });
