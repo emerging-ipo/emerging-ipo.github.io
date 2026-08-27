@@ -24,6 +24,7 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /cron:\s*["']10 8 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']40 9 \* \* 1-5["']/);
+  assert.match(workflow, /cron:\s*["']10 10 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']0 2 \* \* 6["']/);
   assert.doesNotMatch(workflow, /10 7 \* \* 1-5/);
   assert.match(workflow, /npm run build/);
