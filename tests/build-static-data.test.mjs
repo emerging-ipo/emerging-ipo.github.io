@@ -56,7 +56,7 @@ test("weekly report download retries and refuses an incomplete official week", a
   };
 
   await assert.rejects(
-    () => loadCompletedWeekReports(fetchImpl, "2026-08-14"),
+    () => loadCompletedWeekReports(fetchImpl, "2026-08-14", { delayMs: 0 }),
     /2026-08-14.*temporary official source failure/
   );
   assert.equal(attempts.get("2026-08-14"), 5);
@@ -72,7 +72,7 @@ test("weekly report download completes when a transient daily source recovers on
     return dailyReportResponse(date);
   };
 
-  const reports = await loadCompletedWeekReports(fetchImpl, "2026-08-14");
+  const reports = await loadCompletedWeekReports(fetchImpl, "2026-08-14", { delayMs: 0 });
 
   assert.equal(attempts.get("2026-08-14"), 4);
   assert.equal(reports.length, 5);

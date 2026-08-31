@@ -31,6 +31,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Record refresh trigger
+        env:
+          REFRESH_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          printf 'Trigger: %s\nSchedule: %s\n' "$GITHUB_EVENT_NAME" "$REFRESH_SCHEDULE"
+          date --utc --iso-8601=seconds
+          TZ=Asia/Taipei date --iso-8601=seconds
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
