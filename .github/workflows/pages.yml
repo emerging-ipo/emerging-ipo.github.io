@@ -7,6 +7,8 @@ on:
   schedule:
     # 台灣時間 16:10，週一～週五：快速更新
     - cron: "10 8 * * 1-5"
+    # 台灣時間 16:40，週一～週五：16:10 漏跑或官方資料延遲時補抓
+    - cron: "40 8 * * 1-5"
     # 台灣時間 17:40，週一～週五：正式盤後更新
     - cron: "40 9 * * 1-5"
     # 台灣時間 18:10，週一～週五：排程延遲時的盤後補抓
@@ -41,6 +43,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Verify generated data
+        run: npm run verify:data
+        env:
+          REFRESH_SCHEDULE: ${{ github.event.schedule }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

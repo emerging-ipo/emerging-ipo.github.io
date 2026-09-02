@@ -9,6 +9,7 @@
     "build:data": "node scripts/build-static-data.mjs",
     "refresh:data": "npm run build:data",
     "build": "npm run build:data && next build",
+    "verify:data": "node scripts/verify-static-data.mjs",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs"
   },

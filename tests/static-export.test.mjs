@@ -23,6 +23,7 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.match(workflow, /path:\s*out/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /cron:\s*["']10 8 \* \* 1-5["']/);
+  assert.match(workflow, /cron:\s*["']40 8 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']40 9 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']10 10 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']0 2 \* \* 6["']/);
@@ -30,19 +31,23 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.doesNotMatch(workflow, /10 7 \* \* 1-5/);
   assert.doesNotMatch(workflow, /10 16 \* \* 1-5|40 17 \* \* 1-5|10 18 \* \* 1-5|0 10 \* \* 6/);
   assert.match(workflow, /npm run build/);
+  assert.match(workflow, /npm run verify:data/);
   assert.doesNotMatch(workflow, /DATA_API_BASE|NEXT_PUBLIC_DATA_API_BASE|chatgpt\.site/);
 });
 
 test("scheduled build uses the local official-data builder only", async () => {
-  const [pkg, script, legacyScript] = await Promise.all([
+  const [pkg, script, legacyScript, builder] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../scripts/build-static-data.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../scripts/refresh-snapshots.mjs", import.meta.url), "utf8")
+    readFile(new URL("../scripts/refresh-snapshots.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../lib/static-data-builder.mjs", import.meta.url), "utf8")
   ]);
   assert.match(pkg, /"build:data": "node scripts\/build-static-data\.mjs"/);
   assert.match(pkg, /"build": "npm run build:data && next build"/);
   assert.match(script, /buildStaticData/);
   assert.match(legacyScript, /buildStaticData/);
+  assert.match(builder, /announcement\/auction\?response=json&yy=/);
+  assert.doesNotMatch(builder, /announcement\/auction\?response=json&date=/);
   assert.doesNotMatch(legacyScript, /chatgpt\.site|DATA_API_BASE/);
 });
 
