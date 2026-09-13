@@ -33,8 +33,18 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.doesNotMatch(workflow, /10 16 \* \* 1-5|40 17 \* \* 1-5|0 10 \* \* 6/);
   assert.match(workflow, /npm run build/);
   assert.match(workflow, /NODE_OPTIONS:\s*--use-system-ca/);
+  assert.match(workflow, /NODE_EXTRA_CA_CERTS:\s*certs\/twca-tpex-ca\.pem/);
+  assert.match(workflow, /CURL_CA_BUNDLE:\s*certs\/twca-tpex-ca\.pem/);
   assert.match(workflow, /npm run verify:data/);
   assert.doesNotMatch(workflow, /DATA_API_BASE|NEXT_PUBLIC_DATA_API_BASE|chatgpt\.site/);
+});
+
+test("local static-data build bootstraps the pinned TPEx certificate chain", async () => {
+  const script = await readFile(new URL("../scripts/build-static-data.mjs", import.meta.url), "utf8");
+  assert.match(script, /NODE_EXTRA_CA_CERTS/);
+  assert.match(script, /CURL_CA_BUNDLE/);
+  assert.match(script, /twca-tpex-ca\.pem/);
+  assert.match(script, /--use-system-ca/);
 });
 
 test("scheduled build uses the local official-data builder only", async () => {

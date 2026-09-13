@@ -41,6 +41,8 @@ jobs:
       - run: npm run build
         env:
           NODE_OPTIONS: --use-system-ca
+          NODE_EXTRA_CA_CERTS: certs/twca-tpex-ca.pem
+          CURL_CA_BUNDLE: certs/twca-tpex-ca.pem
       - name: Verify generated data
         run: npm run verify:data
         env:
