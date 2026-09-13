@@ -3,6 +3,56 @@ import test from "node:test";
 
 import { fetchJson } from "../lib/static-data-builder.mjs";
 
+test("TPEx curl fallback preserves official strings with unescaped control characters", async () => {
+  const certificateError = new TypeError("fetch failed");
+  certificateError.cause = { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" };
+
+  const value = await fetchJson(
+    async () => {
+      throw certificateError;
+    },
+    "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_R",
+    {},
+    {
+      attempts: 1,
+      curlJson: async () => "{\"name\":\"line one\nline two\"}",
+      log: { warn() {} }
+    }
+  );
+
+  assert.deepEqual(value, { name: "line one\nline two" });
+});
+
+test("TPEx certificate-chain errors use the verified system curl fallback", async () => {
+  let fetchAttempts = 0;
+  let curlAttempts = 0;
+  const warnings = [];
+  const certificateError = new TypeError("fetch failed");
+  certificateError.cause = { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" };
+
+  const value = await fetchJson(
+    async () => {
+      fetchAttempts += 1;
+      throw certificateError;
+    },
+    "https://www.tpex.org.tw/openapi/v1/tpex_esb_latest_statistics",
+    {},
+    {
+      delayMs: 0,
+      curlJson: async () => {
+        curlAttempts += 1;
+        return { source: "system-curl" };
+      },
+      log: { warn: message => warnings.push(message) }
+    }
+  );
+
+  assert.deepEqual(value, { source: "system-curl" });
+  assert.equal(fetchAttempts, 1);
+  assert.equal(curlAttempts, 1);
+  assert.match(warnings[0], /certificate chain/i);
+});
+
 test("official source retries transient HTTP 520 responses before succeeding", async () => {
   let attempts = 0;
   const fetchImpl = async () => {
