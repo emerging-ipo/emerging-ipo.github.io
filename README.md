@@ -9,7 +9,7 @@ Independent GitHub Pages edition of the Taiwan emerging-stock market dashboard. 
 - TPEx emerging-company master and latest statistics for the active roster and post-market quotation data.
 - TPEx recent-registration feed as a supplement and cross-check; it never removes companies from the master roster.
 - TWSE and TPEx listing-application feeds, TWSE auction notices and public-offering notices for IPO stages.
-- TPEx daily reports for the previous complete trading week's final valid weighted-average transaction price. If Friday has no trading, the final available trading day that week is used as `上週基準均價`.
+- Daily official TPEx quote snapshots for the previous complete trading week's final valid last-trade price. If Friday has no valid trade, the final available trading day that week is used as `上週五收盤價`.
 
 Withdrawn, self-withdrawn, cancelled and terminated applications are excluded. Auction, allotment and opening dates are never treated as a stock listing/trading date unless a direct official listing/trading date is available.
 

@@ -15,9 +15,9 @@ const completePayloads = quoteDate => ({
   }
 });
 
-test("16:40 verification rejects a prior-day market snapshot", () => {
+test("17:40 verification rejects a prior-day market snapshot", () => {
   assert.throws(
-    () => verifyStaticData({ ...completePayloads("2026-09-01"), today: "2026-09-02", schedule: "40 8 * * 1-5" }),
+    () => verifyStaticData({ ...completePayloads("2026-09-01"), today: "2026-09-02", schedule: "40 9 * * 1-5" }),
     /行情日期仍為 2026-09-01/
   );
 });
@@ -34,6 +34,16 @@ test("post-close verification accepts a complete current-day snapshot", () => {
   assert.doesNotThrow(() => verifyStaticData({
     ...completePayloads("2026-09-02"),
     today: "2026-09-02",
-    schedule: "40 8 * * 1-5"
+    schedule: "40 9 * * 1-5"
   }));
+});
+
+test("verification rejects a weekly change that does not use last trade and Friday close", () => {
+  const payloads = completePayloads("2026-09-02");
+  payloads.market.rows[0] = { code: "1234", latest: 110, lastWeekClose: 95, change: 0.063158 };
+
+  assert.throws(
+    () => verifyStaticData({ ...payloads, today: "2026-09-02" }),
+    /週漲跌幅計算不一致/
+  );
 });

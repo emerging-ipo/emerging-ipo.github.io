@@ -352,13 +352,13 @@ function MarketView(props: {
   const gainers = [...priced].sort((a, b) => Number(b.dailyChangePercent) - Number(a.dailyChangePercent)).slice(0, 3);
   const decliners = [...priced].sort((a, b) => Number(a.dailyChangePercent) - Number(b.dailyChangePercent)).slice(0, 3);
   const active = [...props.market.rows].filter(row => row.qualified).sort((a, b) => b.volume - a.volume).slice(0, 3);
-  const basisDate = props.market.rows.map(row => row.lastWeekAverageDate).find(Boolean) || "待行情更新";
+  const basisDate = props.market.rows.map(row => row.lastWeekCloseDate).find(Boolean) || "待行情更新";
   const sortLabel = ({ dailyChangePercent: "幅度", change: "週漲跌幅", latest: "最後成交價", volume: "成交量", turnover: "推估成交額" } as const)[props.sort.key];
   const toggleSort = (key: MarketSortKey) => props.setSort({ key, direction: props.sort.key === key && props.sort.direction === "desc" ? "asc" : "desc" });
   const moveOptions: Array<[MarketMove, string]> = [["all", "全部"], ["up", "上漲"], ["down", "下跌"], ["flat", "平盤"], ["noquote", "無報價"]];
   return <>
     <section className="market-overview">
-      <div className="snapshot-copy"><span>MARKET PULSE</span><h2>興櫃盤面</h2><p>日漲跌以當日加權平均成交價相較前一交易日加權均價計算；週漲跌另列供觀察，低流動性標的獨立分榜。首日交易無前一交易日均價者不納入幅度排行。</p></div>
+      <div className="snapshot-copy"><span>MARKET PULSE</span><h2>興櫃盤面</h2><p>日漲跌以當日加權平均成交價相較前一交易日加權均價計算；週漲跌以最後成交價相較上週五收盤價計算。低流動性標的獨立分榜，首日交易無前一交易日均價者不納入幅度排行。</p></div>
       <div className="summary-grid">
         <Metric label="興櫃公司" value={formatInt(s.count)} sub="公開名單家數" />
         <Metric label="有效樣本" value={formatInt(s.qualified)} sub="10張且50萬元以上" />
@@ -376,7 +376,7 @@ function MarketView(props: {
       <div className="surface-title"><div><span>STOCK SCREENER</span><h2>{props.board === "main" ? "興櫃市場排行" : "低量異動觀察"}</h2></div><div className="result-count">顯示 <b>{props.rows.length}</b> / {props.totalRows} 檔 · {sortLabel} <b>{props.sort.direction === "desc" ? "高到低" : "低到高"}</b></div></div>
       <div className="quote-source-bar">
         <div><span>行情時間</span><b>{props.market.quoteDate ? `${props.market.quoteDate} ${props.market.quoteTime}` : "更新中"}</b></div>
-        <div><span>上週基準</span><b>{basisDate}</b></div>
+        <div><span>上週基準日</span><b>{basisDate}</b></div>
         <div className={props.quoteProgress.errors ? "source-warning" : ""}><span>報價完整度</span><b>{props.quoteProgress.success}/{props.quoteProgress.total} · {props.quoteProgress.errors} 檔無報價</b></div>
       </div>
       <div className="filter-bar">
@@ -392,7 +392,7 @@ function MarketView(props: {
       <div className="quick-filter-bar"><span>漲跌狀態</span><div>{moveOptions.map(([value, label]) => <button key={value} className={props.move === value ? "active" : ""} onClick={() => props.setMove(value)}>{label}<b>{props.moveCounts[value]}</b></button>)}</div></div>
       <div className="table-wrap market-table-wrap">
         <table className="data-table market-table">
-          <thead><tr><th>排名</th><th>代號／公司</th><th>產業</th><SortHeader label="最後成交價" sortKey="latest" sort={props.sort} onSort={toggleSort} /><th className="num">漲跌</th><SortHeader label="幅度" sortKey="dailyChangePercent" sort={props.sort} onSort={toggleSort} /><th className="num">上週基準均價</th><SortHeader label="週漲跌幅" sortKey="change" sort={props.sort} onSort={toggleSort} /><th className="num mobile-hide">買價</th><th className="num mobile-hide">賣價</th><SortHeader label="成交量" sortKey="volume" sort={props.sort} onSort={toggleSort} className="mobile-hide" /><SortHeader label="推估成交額" sortKey="turnover" sort={props.sort} onSort={toggleSort} /><th className="mobile-hide">狀態</th></tr></thead>
+          <thead><tr><th>排名</th><th>代號／公司</th><th>產業</th><SortHeader label="最後成交價" sortKey="latest" sort={props.sort} onSort={toggleSort} /><th className="num">漲跌</th><SortHeader label="幅度" sortKey="dailyChangePercent" sort={props.sort} onSort={toggleSort} /><th className="num">上週五收盤價</th><SortHeader label="週漲跌幅" sortKey="change" sort={props.sort} onSort={toggleSort} /><th className="num mobile-hide">買價</th><th className="num mobile-hide">賣價</th><SortHeader label="成交量" sortKey="volume" sort={props.sort} onSort={toggleSort} className="mobile-hide" /><SortHeader label="推估成交額" sortKey="turnover" sort={props.sort} onSort={toggleSort} /><th className="mobile-hide">狀態</th></tr></thead>
           <tbody>{props.rows.map((row, index) => <MarketTableRow key={row.code} row={row} rank={index + 1} onOpen={() => props.openProfile(row.code)} />)}</tbody>
         </table>
         {!props.rows.length && <div className="empty">{props.loading ? "正在讀取報價資料" : "目前篩選條件沒有資料"}</div>}
@@ -422,7 +422,7 @@ function MarketTableRow({ row, rank, onOpen }: { row: MarketRow; rank: number; o
     <td className="num price-cell">{price(row.latest)}<span className="subtext">{row.latest === null ? "無報價" : row.priceTime?.slice(11, 16) || "--"}</span></td>
     <td className={`num change-amount ${dailyDirection}`}>{signedPrice(row.dailyChange)}</td>
     <td className={`change ${dailyDirection}`}>{firstTradingDay ? <span className="muted-text" title="首日交易沒有前一交易日加權均價，不納入幅度排序">首日</span> : <><b>{percent(row.dailyChangePercent)}</b><span className="change-track"><i style={{ width: `${Math.min(100, Math.abs(row.dailyChangePercent || 0) * 500)}%` }} /></span></>}</td>
-    <td className="num">{row.lastWeekAverage === null || row.lastWeekAverage === undefined ? <span className="muted-text" title={row.priceNote || "上週無有效加權均價"}>無基準</span> : price(row.lastWeekAverage)}</td>
+    <td className="num">{row.lastWeekClose === null || row.lastWeekClose === undefined ? <span className="muted-text" title={row.priceNote || "上週無有效最後成交價"}>無基準</span> : price(row.lastWeekClose)}</td>
     <td className={`change ${weeklyDirection}`}>{row.change === null ? <span className="muted-text" title={row.priceNote || "上週無有效成交"}>無基準</span> : <><b>{percent(row.change)}</b><span className="change-track"><i style={{ width: `${Math.min(100, Math.abs(row.change) * 500)}%` }} /></span></>}</td>
     <td className="num mobile-hide">{price(row.bid)}</td><td className="num mobile-hide">{price(row.ask)}</td>
     <td className="num mobile-hide">{formatShares(row.volume)}</td><td className="num">{formatMoney(row.turnover)}</td>
@@ -614,7 +614,7 @@ function CompanyDrawer({ profile, marketRow, loading, refreshing, onClose }: { p
   return <><div className="drawer-backdrop" onClick={onClose} /><aside className="drawer" aria-label="公司輪廓">
     <div className="drawer-head"><div><span>COMPANY PROFILE</span><h2>{profile ? `${profile.code} ${profile.name}` : marketRow ? `${marketRow.code} ${marketRow.name}` : "公司輪廓"}</h2><p>{profile?.fullName || "正在讀取公開公司名稱"}{refreshing && <small className="profile-refresh-status">補充資料讀取中</small>}</p></div><button className="icon-button" onClick={onClose} aria-label="關閉" title="關閉">×</button></div>
     <div className="drawer-body">
-      {marketRow && <section className="quote-panel"><div><span>最後成交價</span><strong>{price(marketRow.latest)}</strong></div><div><span>漲跌</span><b className={dailyDirection}>{signedPrice(marketRow.dailyChange)}</b></div><div><span>幅度</span><b className={dailyDirection}>{percent(marketRow.dailyChangePercent)}</b></div><div><span>上週基準均價</span><b>{price(marketRow.lastWeekAverage)}</b></div><div><span>週漲跌幅</span><b className={weeklyDirection}>{percent(marketRow.change)}</b></div><div><span>報價時間</span><b>{marketRow.priceTime?.slice(5, 16) || "無報價"}</b></div></section>}
+      {marketRow && <section className="quote-panel"><div><span>最後成交價</span><strong>{price(marketRow.latest)}</strong></div><div><span>漲跌</span><b className={dailyDirection}>{signedPrice(marketRow.dailyChange)}</b></div><div><span>幅度</span><b className={dailyDirection}>{percent(marketRow.dailyChangePercent)}</b></div><div><span>上週五收盤價</span><b>{price(marketRow.lastWeekClose)}</b></div><div><span>週漲跌幅</span><b className={weeklyDirection}>{percent(marketRow.change)}</b></div><div><span>報價時間</span><b>{marketRow.priceTime?.slice(5, 16) || "無報價"}</b></div></section>}
       {loading && !profile && <div className="profile-loading"><span /><span /><span /><span /></div>}
       {profile?.error && <div className="notice error"><span className="status-dot" />{profile.error}</div>}
       {profile && <>

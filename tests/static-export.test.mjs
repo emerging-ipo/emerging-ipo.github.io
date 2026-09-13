@@ -23,13 +23,14 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.match(workflow, /path:\s*out/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /cron:\s*["']10 8 \* \* 1-5["']/);
-  assert.match(workflow, /cron:\s*["']40 8 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']40 9 \* \* 1-5["']/);
-  assert.match(workflow, /cron:\s*["']10 10 \* \* 1-5["']/);
   assert.match(workflow, /cron:\s*["']0 2 \* \* 6["']/);
+  assert.match(workflow, /contents:\s*write/);
+  assert.match(workflow, /tpex-last-trade-history\.json/);
   assert.doesNotMatch(workflow, /timezone:/);
   assert.doesNotMatch(workflow, /10 7 \* \* 1-5/);
-  assert.doesNotMatch(workflow, /10 16 \* \* 1-5|40 17 \* \* 1-5|10 18 \* \* 1-5|0 10 \* \* 6/);
+  assert.doesNotMatch(workflow, /40 8 \* \* 1-5|10 10 \* \* 1-5|10 7 \* \* 1-5/);
+  assert.doesNotMatch(workflow, /10 16 \* \* 1-5|40 17 \* \* 1-5|0 10 \* \* 6/);
   assert.match(workflow, /npm run build/);
   assert.match(workflow, /npm run verify:data/);
   assert.doesNotMatch(workflow, /DATA_API_BASE|NEXT_PUBLIC_DATA_API_BASE|chatgpt\.site/);
@@ -73,7 +74,7 @@ test("dashboard does not label a static refresh as unsupported live data", async
   assert.doesNotMatch(dashboard, /\|\| "即時"/);
 });
 
-test("market metadata and methodology use emerging-stock average-price terminology", async () => {
+test("market metadata and methodology distinguish daily averages from Friday last-trade references", async () => {
   const [marketPage, methodology, dashboard, readme] = await Promise.all([
     readFile(new URL("../app/market/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/methodology/page.tsx", import.meta.url), "utf8"),
@@ -83,7 +84,11 @@ test("market metadata and methodology use emerging-stock average-price terminolo
   assert.match(marketPage, /行情排行/);
   assert.doesNotMatch(marketPage, /即時排行|即時報價/);
   assert.match(methodology, /盤後/);
-  assert.doesNotMatch(methodology, /上週收盤|前一交易日收盤/);
-  assert.doesNotMatch(dashboard, /上週收盤|前一交易日收盤|收盤報價/);
-  assert.doesNotMatch(readme, /上週收盤/);
+  assert.match(methodology, /上週五收盤價/);
+  assert.match(dashboard, /上週五收盤價/);
+  assert.match(readme, /上週五收盤價/);
+  assert.match(methodology, /前一交易日加權均價/);
+  assert.doesNotMatch(methodology, /上週基準均價|前一交易日收盤/);
+  assert.doesNotMatch(dashboard, /上週基準均價|前一交易日收盤|收盤報價/);
+  assert.doesNotMatch(readme, /上週基準均價|前一交易日收盤/);
 });

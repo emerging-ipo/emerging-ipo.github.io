@@ -8,7 +8,8 @@ import {
   isTerminatedApplication,
   mergeRecentRegistrations,
   parseDailyAverageReport,
-  selectWeeklyBaselines
+  selectWeeklyLastTrades,
+  updateQuoteHistory
 } from "../lib/official-static-data.mjs";
 
 test("recent registrations supplement but never remove the master roster", () => {
@@ -72,22 +73,34 @@ test("terminated application terms are recognised across official status wording
   assert.equal(isTerminatedApplication("已核准"), false);
 });
 
-test("weekly baseline uses the final available session in the completed week", () => {
-  const baselines = selectWeeklyBaselines([
-    { date: "2026-08-03", rows: [{ code: "1234", close: 80 }] },
-    { date: "2026-08-06", rows: [{ code: "1234", close: 83 }] }
+test("weekly last-trade baseline uses the final available session in the completed week", () => {
+  const baselines = selectWeeklyLastTrades([
+    { date: "2026-08-03", rows: [{ code: "1234", latest: 80, volume: 10_000 }] },
+    { date: "2026-08-06", rows: [{ code: "1234", latest: 83, volume: 10_000 }] }
   ], "2026-08-07");
 
-  assert.deepEqual(baselines.get("1234"), { average: 83, close: 83, date: "2026-08-06" });
+  assert.deepEqual(baselines.get("1234"), { close: 83, date: "2026-08-06" });
 });
 
-test("weekly baseline falls back to the latest valid session when Friday is closed", () => {
-  const baselines = selectWeeklyBaselines([
-    { date: "2026-08-11", values: new Map([["1234", 79]]) },
-    { date: "2026-08-13", values: new Map([["1234", 81]]) }
+test("weekly last-trade baseline falls back when Friday has no valid trade", () => {
+  const baselines = selectWeeklyLastTrades([
+    { date: "2026-08-13", rows: [{ code: "1234", latest: 81, volume: 10_000 }] },
+    { date: "2026-08-14", rows: [{ code: "1234", latest: 0, volume: 0 }] }
   ], "2026-08-14");
 
-  assert.deepEqual(baselines.get("1234"), { average: 81, close: 81, date: "2026-08-13" });
+  assert.deepEqual(baselines.get("1234"), { close: 81, date: "2026-08-13" });
+});
+
+test("official quote history retains one valid last-trade snapshot per market date", () => {
+  const history = updateQuoteHistory({ snapshots: [{ date: "2026-08-14", rows: [{ code: "1234", latest: 95, volume: 10_000 }] }] }, [
+    { SecuritiesCompanyCode: "1234", Date: "115/08/20", LatestPrice: "110", TransactionVolume: "10,000" },
+    { SecuritiesCompanyCode: "5678", Date: "115/08/20", LatestPrice: "0", TransactionVolume: "0" }
+  ]);
+
+  assert.deepEqual(history.snapshots, [
+    { date: "2026-08-14", rows: [{ code: "1234", latest: 95, volume: 10_000 }] },
+    { date: "2026-08-20", rows: [{ code: "1234", latest: 110, volume: 10_000 }] }
+  ]);
 });
 
 test("market payload keeps official current, prior-session and completed-week values distinct", () => {
@@ -95,17 +108,18 @@ test("market payload keeps official current, prior-session and completed-week va
     generatedAt: "2026-08-20 15:10:00",
     companies: [{ SecuritiesCompanyCode: "1234", CompanyAbbreviation: "測試公司", CompanyName: "測試公司股份有限公司", SecuritiesIndustryCode: "24", DateOfListing: "20260819" }],
     quotes: [{ SecuritiesCompanyCode: "1234", Date: "115/08/20", Time: "15:00:00", LatestPrice: "110", PreviousAveragePrice: "98", Average: "101", TransactionVolume: "10000" }],
-    baselines: new Map([["1234", { average: 95, date: "2026-08-14" }]])
+    baselines: new Map([["1234", { average: 90, close: 95, date: "2026-08-14" }]])
   });
 
   assert.equal(payload.rows[0].latest, 110);
   assert.equal(payload.rows[0].average, 101);
   assert.equal(payload.rows[0].dailyChange, 3);
   assert.equal(payload.rows[0].dailyChangePercent, 0.030612);
-  assert.equal(payload.rows[0].lastWeekAverage, 95);
+  assert.equal(payload.rows[0].lastWeekAverage, 90);
   assert.equal(payload.rows[0].lastWeekAverageDate, "2026-08-14");
   assert.equal(payload.rows[0].lastWeekClose, 95);
-  assert.equal(payload.rows[0].change, 0.063158);
+  assert.equal(payload.rows[0].lastWeekCloseDate, "2026-08-14");
+  assert.equal(payload.rows[0].change, 0.157895);
   assert.equal(payload.rows[0].industry, "半導體");
 });
 
