@@ -32,6 +32,7 @@ test("GitHub Pages workflow deploys the static output", async () => {
   assert.doesNotMatch(workflow, /40 8 \* \* 1-5|10 10 \* \* 1-5|10 7 \* \* 1-5/);
   assert.doesNotMatch(workflow, /10 16 \* \* 1-5|40 17 \* \* 1-5|0 10 \* \* 6/);
   assert.match(workflow, /npm run build/);
+  assert.match(workflow, /NODE_OPTIONS:\s*--use-system-ca/);
   assert.match(workflow, /npm run verify:data/);
   assert.doesNotMatch(workflow, /DATA_API_BASE|NEXT_PUBLIC_DATA_API_BASE|chatgpt\.site/);
 });

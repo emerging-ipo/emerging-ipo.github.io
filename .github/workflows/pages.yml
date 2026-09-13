@@ -39,6 +39,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          NODE_OPTIONS: --use-system-ca
       - name: Verify generated data
         run: npm run verify:data
         env:
